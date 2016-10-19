@@ -5,3 +5,11 @@ authors = ["Mutualideas <jason.lu.nz@hotmail.com>"]
 
 [dependencies]
 image = "*"
+conrod = "0.44.0"
+find_folder = "0.3.0"
+piston_window - "0.55.0"
+
+
+
+
+

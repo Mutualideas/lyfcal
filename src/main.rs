@@ -1,4 +1,7 @@
 extern crate image; 
+extern crate conrod;
+extern crate piston_window;
+extern crate find_folder;
 
 fn main() {
     let img = image::open()
