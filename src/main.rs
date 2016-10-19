@@ -1,4 +1,7 @@
+extern crate image; 
+
 fn main() {
+    let img = image::open()
     set_background();
 }
 
