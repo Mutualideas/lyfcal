@@ -1,4 +1,5 @@
-extern crate image; 
+extern crate image;
+#[macro_use]
 extern crate conrod;
 extern crate piston_window;
 extern crate find_folder;
@@ -13,8 +14,8 @@ fn main() {
     //////////////////
 
 
-    const WIDTH: u32 = 1024;
-    const HEIGHT: u32 = 728;
+    const WIDTH: u32 = 256;
+    const HEIGHT: u32 = 512;
 
     // Construct the window.
     let mut window: PistonWindow =
@@ -48,6 +49,7 @@ fn main() {
     // The image map describing each of our widget->image mappings (in our case, none).
     let image_map = conrod::image::Map::new();
 
+    let ids = Ids::new(ui.widget_id_generator());
 
     /////////////////////
     ///// Main Loop /////
@@ -64,6 +66,7 @@ fn main() {
 
         event.update(|_| {
             let mut ui = ui.set_widgets();
+            gui(&mut ui, &ids);
         });
 
         window.draw_2d(&event, |c, g| {
@@ -83,7 +86,30 @@ fn main() {
     ///////////////////////////////
 
     set_background();
+
 }
+
+widget_ids!{
+    struct Ids {
+        background,
+        title
+    } 
+}
+
+fn gui(ui: &mut conrod::UiCell, ids: &Ids) {
+    use conrod::{widget, Colorable, Positionable, Widget};
+
+    widget::Canvas::new()
+        .color(conrod::color::WHITE)
+        .set(ids.background, ui);
+    widget::Text::new("lyfcal")
+        .font_size(46)
+        .color(conrod::color::LIGHT_CHARCOAL)
+        .mid_top_with_margin_on(ids.background, 24.0)
+        .set(ids.title, ui);
+}
+
+
 
 
 #[cfg(target_os="macos")]
