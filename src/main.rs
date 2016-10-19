@@ -115,6 +115,7 @@ fn gui(ui: &mut conrod::UiCell, ids: &Ids, app: &mut App) {
     use conrod::{widget, Borderable, Colorable, Positionable, Sizeable, Widget};
 
     widget::Canvas::new()
+        .border(0.0)
         .color(conrod::color::WHITE)
         .set(ids.background, ui);
 
