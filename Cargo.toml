@@ -4,12 +4,7 @@ version = "0.1.0"
 authors = ["Mutualideas <jason.lu.nz@hotmail.com>"]
 
 [dependencies]
-image = "*"
+image = "0.10.3"
 conrod = "0.44.0"
 find_folder = "0.3.0"
-piston_window - "0.55.0"
-
-
-
-
-
+piston_window = "0.52.0"
