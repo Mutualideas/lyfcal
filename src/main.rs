@@ -20,6 +20,7 @@ struct App {
 
 const MARGIN: f64 = 24.0;
 const MAX_LIFE_EXPECTANCY: f32 = 100.0;
+const BIRTH_LIMIT_OFFSET: f32 = MAX_LIFE_EXPECTANCY - 5.0;
 
 
 fn main() {
@@ -164,7 +165,7 @@ fn gui(ui: &mut conrod::UiCell, ids: &Ids, app: &mut App, title_font: conrod::te
     let current_year = chrono::Local::now().year() as f32;
 
     let date_column_w = (ui.w_of(ids.background).unwrap() - MARGIN * 2.0) / 3.0;
-    for new_year in widget::NumberDialer::new(app.birthday.year() as f32, current_year - MAX_LIFE_EXPECTANCY, current_year, 0)
+    for new_year in widget::NumberDialer::new(app.birthday.year() as f32, current_year - BIRTH_LIMIT_OFFSET, current_year, 0)
         .color(conrod::color::LIGHT_CHARCOAL)
         .mid_right_with_margin_on(ids.background, MARGIN)
         .down(12.0)
@@ -259,8 +260,12 @@ fn gui(ui: &mut conrod::UiCell, ids: &Ids, app: &mut App, title_font: conrod::te
             .set(label_id, ui);
     }
 
+    let min_life_expectancy = ((chrono::Local::now().year() - app.birthday.year()) as f32).max(5.0);
+    let max_life_expectancy = MAX_LIFE_EXPECTANCY.max(min_life_expectancy);
+    app.life_expectancy = app.life_expectancy.min(max_life_expectancy).max(min_life_expectancy);
+
     let label = format!("life expectancy {} years", app.life_expectancy.trunc());
-    slider(&mut app.life_expectancy, 5.0, MAX_LIFE_EXPECTANCY, (ids.birthday_year, MARGIN), &label, ids.life_expectancy, ids.life_expectancy_label, ids.background, ui);
+    slider(&mut app.life_expectancy, min_life_expectancy, max_life_expectancy, (ids.birthday_year, MARGIN), &label, ids.life_expectancy, ids.life_expectancy_label, ids.background, ui);
 
     let label = format!("past opacity {}%", (app.past_opacity * 100.0).trunc());
     slider(&mut app.past_opacity, 0.0, 1.0, (ids.life_expectancy, MARGIN), &label, ids.past_opacity, ids.past_opacity_label, ids.background, ui);
