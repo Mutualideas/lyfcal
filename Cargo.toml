@@ -1,11 +1,11 @@
 [package]
 name = "lyfcal"
 version = "0.1.0"
-authors = ["Mutualideas <jason.lu.nz@hotmail.com>"]
+authors = ["Mutualideas <jason.lu.nz@hotmail.com>", "mitchmindtree <mitchell.nordine@gmail.com>"]
 
 [dependencies]
 image = "0.10.3"
-conrod = "0.44.0"
+conrod = "0.44.1"
 find_folder = "0.3.0"
 piston_window = "0.52.0"
 chrono = "0.2.25"
