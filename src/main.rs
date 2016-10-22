@@ -3,15 +3,23 @@ extern crate image;
 extern crate conrod;
 extern crate piston_window;
 extern crate find_folder;
+extern crate chrono;
 
 use piston_window::{EventLoop, OpenGL, PistonWindow, UpdateEvent, WindowSettings};
-
+use chrono::{Datelike};
 
 struct App {
     past_opacity: f32,
     future_opacity: f32,
     life_expectancy: f32,
+    birthday: chrono::DateTime<chrono::Local>,
 }
+
+
+    ///// Constants /////
+
+const MARGIN: f64 = 24.0;
+const MAX_LIFE_EXPECTANCY: f32 = 100.0;
 
 
 fn main() {
@@ -40,6 +48,7 @@ fn main() {
         past_opacity: 0.0,
         future_opacity: 0.7,
         life_expectancy: 80.0,
+        birthday: chrono::Local::now().with_month(1).unwrap().with_day(1).unwrap(),
     };
 
     //////////////////////////
@@ -105,6 +114,10 @@ fn main() {
 
 }
 
+///////////////
+///// GUI /////
+///////////////
+
 widget_ids!{
     struct Ids {
         background,
@@ -115,11 +128,16 @@ widget_ids!{
         future_opacity_label,
         life_expectancy,
         life_expectancy_label,
+        birthday_title,
+        birthday_year,
+        birthday_month,
+        birthday_day,
     } 
 }
 
 fn gui(ui: &mut conrod::UiCell, ids: &Ids, app: &mut App, title_font: conrod::text::font::Id) {
-    use conrod::{widget, Borderable, Colorable, Positionable, Sizeable, Widget};
+    use conrod::{widget, Borderable, Colorable, Labelable, Positionable, Sizeable, Widget};
+    use chrono::{Datelike};
 
     widget::Canvas::new()
         .border(0.0)
@@ -131,8 +149,78 @@ fn gui(ui: &mut conrod::UiCell, ids: &Ids, app: &mut App, title_font: conrod::te
     title
         .font_size(38)
         .color(conrod::color::LIGHT_CHARCOAL)
-        .mid_top_with_margin_on(ids.background, 24.0)
+        .mid_top_with_margin_on(ids.background, MARGIN)
         .set(ids.title, ui);
+
+   //Birthday//
+
+    widget::Text::new("when were you born?")
+        .font_size(16)
+        .color(conrod::color::LIGHT_CHARCOAL)
+        .align_middle_x_of(ids.background)
+        .down(32.0)
+        .set(ids.birthday_title, ui);
+
+    let current_year = chrono::Local::now().year() as f32;
+
+    let date_column_w = (ui.w_of(ids.background).unwrap() - MARGIN * 2.0) / 3.0;
+    for new_year in widget::NumberDialer::new(app.birthday.year() as f32, current_year - MAX_LIFE_EXPECTANCY, current_year, 0)
+        .color(conrod::color::LIGHT_CHARCOAL)
+        .mid_right_with_margin_on(ids.background, MARGIN)
+        .down(12.0)
+        .w_h(date_column_w, 24.0)
+        .border(0.0)
+        .label_font_size(12)
+        .label_color(conrod::color::WHITE)
+        .set(ids.birthday_year, ui)
+    {
+        if let Some(date_time) = app.birthday.with_year(new_year as i32) { 
+            app.birthday = date_time;
+        }
+    }
+
+
+    let months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+
+    for new_month in widget::DropDownList::new(&months, Some(app.birthday.month0() as usize))
+        .color(conrod::color::LIGHT_CHARCOAL)
+        .left(0.0)
+        .h(24.0)
+        .border(0.0)
+        .label_font_size(12)
+        .label_color(conrod::color::WHITE)
+        .set(ids.birthday_month, ui)
+    {
+        if let Some(date_time) = app.birthday.with_month((new_month + 1) as u32) { 
+            app.birthday = date_time;
+        }
+    }
+
+
+    fn last_day_of_month(date: &chrono::DateTime<chrono::Local>) -> u32 {
+        use chrono::NaiveDate;
+        let year = date.year();
+        let month = date.month();
+        NaiveDate::from_ymd_opt(year, month + 1, 1).unwrap_or(NaiveDate::from_ymd(year + 1, 1, 1)).pred().day()
+    }
+    let max_day = last_day_of_month(&app.birthday);
+
+    for new_day in widget::NumberDialer::new(app.birthday.day() as f32, 1.0, max_day as f32, 0)
+        .color(conrod::color::LIGHT_CHARCOAL)
+        .left(0.0)
+        .h(24.0)
+        .border(0.0)
+        .label_font_size(12)
+        .label_color(conrod::color::WHITE)
+        .set(ids.birthday_day, ui)
+    {
+        match app.birthday.with_day(new_day as u32) { 
+            Some(valid_date) => app.birthday = valid_date,
+            None => (),
+        }
+    }
+
+
 
    //Sliders//
    
@@ -142,7 +230,7 @@ fn gui(ui: &mut conrod::UiCell, ids: &Ids, app: &mut App, title_font: conrod::te
         value: &mut f32,
         min: f32,
         max: f32,
-        down: f64,
+        (down_from, distance): (widget::Id, f64),
         label: &str,
         slider_id: widget::Id,
         label_id: widget::Id,
@@ -151,9 +239,9 @@ fn gui(ui: &mut conrod::UiCell, ids: &Ids, app: &mut App, title_font: conrod::te
     ) {
 
         for new_value in widget::Slider::new(*value, min, max)
-            .padded_w_of(background, 24.0)
+            .padded_w_of(background, MARGIN)
             .middle_of(background)
-            .down(down)
+            .down_from(down_from, distance)
             .h(SLIDER_H)
             .color(conrod::color::LIGHT_CHARCOAL)
             .border(0.0)
@@ -172,13 +260,13 @@ fn gui(ui: &mut conrod::UiCell, ids: &Ids, app: &mut App, title_font: conrod::te
     }
 
     let label = format!("life expectancy {} years", app.life_expectancy.trunc());
-    slider(&mut app.life_expectancy, 5.0, 100.0, 32.0, &label, ids.life_expectancy, ids.life_expectancy_label, ids.background, ui);
+    slider(&mut app.life_expectancy, 5.0, MAX_LIFE_EXPECTANCY, (ids.birthday_year, MARGIN), &label, ids.life_expectancy, ids.life_expectancy_label, ids.background, ui);
 
     let label = format!("past opacity {}%", (app.past_opacity * 100.0).trunc());
-    slider(&mut app.past_opacity, 0.0, 1.0, 16.0, &label, ids.past_opacity, ids.past_opacity_label, ids.background, ui);
+    slider(&mut app.past_opacity, 0.0, 1.0, (ids.life_expectancy, MARGIN), &label, ids.past_opacity, ids.past_opacity_label, ids.background, ui);
 
     let label = format!("future opacity {}%", (app.future_opacity * 100.0).trunc());
-    slider(&mut app.future_opacity, 0.0, 1.0, 16.0, &label, ids.future_opacity, ids.future_opacity_label, ids.background, ui);
+    slider(&mut app.future_opacity, 0.0, 1.0, (ids.past_opacity, 4.0), &label, ids.future_opacity, ids.future_opacity_label, ids.background, ui);
   
 }
 
