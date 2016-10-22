@@ -19,6 +19,9 @@ struct App {
     ///// Constants /////
 
 const MARGIN: f64 = 24.0;
+const ROW_H: f64 = 24.0;
+const GAP_THICKNESS: f64 = 4.0;
+
 const MAX_LIFE_EXPECTANCY: f32 = 100.0;
 const BIRTH_LIMIT_OFFSET: f32 = MAX_LIFE_EXPECTANCY - 5.0;
 
@@ -164,12 +167,12 @@ fn gui(ui: &mut conrod::UiCell, ids: &Ids, app: &mut App, title_font: conrod::te
 
     let current_year = chrono::Local::now().year() as f32;
 
-    let date_column_w = (ui.w_of(ids.background).unwrap() - MARGIN * 2.0) / 3.0;
+    let date_column_w = (ui.w_of(ids.background).unwrap() - (MARGIN + GAP_THICKNESS) * 2.0) / 3.0;
     for new_year in widget::NumberDialer::new(app.birthday.year() as f32, current_year - BIRTH_LIMIT_OFFSET, current_year, 0)
         .color(conrod::color::LIGHT_CHARCOAL)
         .mid_right_with_margin_on(ids.background, MARGIN)
         .down(12.0)
-        .w_h(date_column_w, 24.0)
+        .w_h(date_column_w, ROW_H)
         .border(0.0)
         .label_font_size(12)
         .label_color(conrod::color::WHITE)
@@ -185,8 +188,9 @@ fn gui(ui: &mut conrod::UiCell, ids: &Ids, app: &mut App, title_font: conrod::te
 
     for new_month in widget::DropDownList::new(&months, Some(app.birthday.month0() as usize))
         .color(conrod::color::LIGHT_CHARCOAL)
-        .left(0.0)
-        .h(24.0)
+        .align_middle_x_of(ids.background)
+        .align_middle_y_of(ids.birthday_year)
+        .h(ROW_H)
         .border(0.0)
         .label_font_size(12)
         .label_color(conrod::color::WHITE)
@@ -208,8 +212,9 @@ fn gui(ui: &mut conrod::UiCell, ids: &Ids, app: &mut App, title_font: conrod::te
 
     for new_day in widget::NumberDialer::new(app.birthday.day() as f32, 1.0, max_day as f32, 0)
         .color(conrod::color::LIGHT_CHARCOAL)
-        .left(0.0)
-        .h(24.0)
+        .mid_left_with_margin_on(ids.background, MARGIN)
+        .align_middle_y_of(ids.birthday_year)
+        .h(ROW_H)
         .border(0.0)
         .label_font_size(12)
         .label_color(conrod::color::WHITE)
@@ -225,8 +230,6 @@ fn gui(ui: &mut conrod::UiCell, ids: &Ids, app: &mut App, title_font: conrod::te
 
    //Sliders//
    
-    const SLIDER_H: f64 = 24.0;
-
     fn slider(
         value: &mut f32,
         min: f32,
@@ -243,7 +246,7 @@ fn gui(ui: &mut conrod::UiCell, ids: &Ids, app: &mut App, title_font: conrod::te
             .padded_w_of(background, MARGIN)
             .middle_of(background)
             .down_from(down_from, distance)
-            .h(SLIDER_H)
+            .h(ROW_H)
             .color(conrod::color::LIGHT_CHARCOAL)
             .border(0.0)
             .set(slider_id, ui)
@@ -251,7 +254,7 @@ fn gui(ui: &mut conrod::UiCell, ids: &Ids, app: &mut App, title_font: conrod::te
             *value = new_value;
         }
         
-        let font_size = (SLIDER_H / 2.0) as u32;
+        let font_size = (ROW_H / 2.0) as u32;
         widget::Text::new(&label)
             .font_size(font_size)
             .color(conrod::color::WHITE)
@@ -271,7 +274,7 @@ fn gui(ui: &mut conrod::UiCell, ids: &Ids, app: &mut App, title_font: conrod::te
     slider(&mut app.past_opacity, 0.0, 1.0, (ids.life_expectancy, MARGIN), &label, ids.past_opacity, ids.past_opacity_label, ids.background, ui);
 
     let label = format!("future opacity {}%", (app.future_opacity * 100.0).trunc());
-    slider(&mut app.future_opacity, 0.0, 1.0, (ids.past_opacity, 4.0), &label, ids.future_opacity, ids.future_opacity_label, ids.background, ui);
+    slider(&mut app.future_opacity, 0.0, 1.0, (ids.past_opacity, GAP_THICKNESS), &label, ids.future_opacity, ids.future_opacity_label, ids.background, ui);
   
 }
 
