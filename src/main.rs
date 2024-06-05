@@ -40,7 +40,8 @@ impl Default for Config {
 #[derive(Default, Debug)]
 struct LyfcalApp {
     config: Config,
-    show_deferred_viewport: Arc<AtomicBool>,
+    show_immediate_viewport: bool,
+    //show_deferred_viewport: Arc<AtomicBool>,
 }
 
 impl eframe::App for LyfcalApp {
@@ -157,9 +158,12 @@ impl eframe::App for LyfcalApp {
             ui.vertical_centered(|ui| {
                 if ui.button("initialize").clicked() {
                     populate_events(&mut self.config);
+                    self.show_immediate_viewport = true;
+                    /*
                     let current_value = self.show_deferred_viewport.load(Ordering::Relaxed);
                     self.show_deferred_viewport
                         .store(!current_value, Ordering::Relaxed);
+                    */
                 }
             });
             ui.separator();
@@ -172,6 +176,36 @@ impl eframe::App for LyfcalApp {
             ui.label(format!("elapsed date: {}", self.config.elapsed_date));
         });
 
+        if self.show_immediate_viewport {
+            ctx.show_viewport_immediate(
+                egui::ViewportId::from_hash_of("immediate_viewport"),
+                egui::ViewportBuilder::default()
+                    .with_title("lyfcal")
+                    .with_transparent(true)
+                    //.with_window_level(egui::WindowLevel::AlwaysOnBottom)
+                    .with_maximized(true)
+                    .with_fullsize_content_view(true),
+                |ctx, class| {
+                    assert!(
+                        class == egui::ViewportClass::Immediate,
+                        "This egui backend doesn't support multiple viewports"
+                    );
+
+                    egui::CentralPanel::default().show(ctx, |ui| {
+                        for days in self.config.events.clone() {
+                            ui.label(format!("{:?}", days));
+                        }
+                    });
+
+                    if ctx.input(|i| i.viewport().close_requested()) {
+                        // Tell parent viewport that we should not show next frame:
+                        self.show_immediate_viewport = false;
+                    }
+                },
+            );
+        }
+
+        /*
         if self.show_deferred_viewport.load(Ordering::Relaxed) {
             let show_deferred_viewport = self.show_deferred_viewport.clone();
             ctx.show_viewport_deferred(
@@ -180,7 +214,6 @@ impl eframe::App for LyfcalApp {
                     .with_title("lyfcal")
                     .with_transparent(true)
                     //.with_window_level(egui::WindowLevel::AlwaysOnBottom)
-                    //.with_fullscreen(true)
                     .with_maximized(true)
                     .with_fullsize_content_view(true),
                 move |ctx, class| {
@@ -189,19 +222,18 @@ impl eframe::App for LyfcalApp {
                         "This egui backend doesn't support multiple viewports"
                     );
 
-                    //egui::CentralPanel::default().show(ctx, |ui| {
-                    /*
-                        for days in self.config.events.clone() {
+                    egui::CentralPanel::default().show(ctx, |ui| {
+                        for days in self.config.events {
                             ui.label(format!("{:?}", days));
                         }
-                    */
-                    //});
+                    });
                     if ctx.input(|i| i.viewport().close_requested()) {
                         show_deferred_viewport.store(false, Ordering::Relaxed);
                     }
                 },
             );
         }
+        */
     }
 }
 
