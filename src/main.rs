@@ -174,6 +174,8 @@ impl eframe::App for LyfcalApp {
             ));
 
             ui.label(format!("elapsed date: {}", self.config.elapsed_date));
+
+            ui.label(format!("event number: {}", self.config.events.len()));
         });
 
         if self.show_immediate_viewport {
