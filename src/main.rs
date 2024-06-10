@@ -5,10 +5,8 @@ use eframe::egui;
 //use egui::style;
 use egui_extras;
 use std::collections::BTreeMap;
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
+//use std::sync::{atomic::{AtomicBool, Ordering}, Arc,};
+
 #[derive(Debug)]
 struct Config {
     birthdate: Option<NaiveDate>,
@@ -41,6 +39,7 @@ impl Default for Config {
 struct LyfcalApp {
     config: Config,
     show_immediate_viewport: bool,
+    viewport_redraw: bool,
     //show_deferred_viewport: Arc<AtomicBool>,
 }
 
@@ -159,6 +158,7 @@ impl eframe::App for LyfcalApp {
                 if ui.button("initialize").clicked() {
                     populate_events(&mut self.config);
                     self.show_immediate_viewport = true;
+                    self.viewport_redraw = true;
                     /*
                     let current_value = self.show_deferred_viewport.load(Ordering::Relaxed);
                     self.show_deferred_viewport
@@ -192,16 +192,30 @@ impl eframe::App for LyfcalApp {
                         class == egui::ViewportClass::Immediate,
                         "This egui backend doesn't support multiple viewports"
                     );
+                    if self.viewport_redraw {
+                        egui::CentralPanel::default().show(ctx, |ui| {
+                            //TODO
+                            //
+                            //
+                            //
+                            //
 
-                    egui::CentralPanel::default().show(ctx, |ui| {
-                        for days in self.config.events.clone() {
-                            ui.label(format!("{:?}", days));
-                        }
-                    });
-
+                            ui.painter().rect_filled(
+                                egui::Rect::from_min_size(
+                                    egui::Pos2::new(100.0, 100.0),
+                                    egui::Vec2::new(200.0, 100.0),
+                                ),
+                                2.0,
+                                egui::Color32::RED,
+                            );
+                            for days in self.config.events.clone() {
+                                ui.label(format!("{:?}", days));
+                            }
+                        });
+                        self.viewport_redraw = false;
+                    }
                     if ctx.input(|i| i.viewport().close_requested()) {
-                        // Tell parent viewport that we should not show next frame:
-                        self.show_immediate_viewport = false;
+                        self.show_immediate_viewport = false; //close viewport
                     }
                 },
             );
@@ -239,12 +253,20 @@ impl eframe::App for LyfcalApp {
     }
 }
 
-// UI elements
+// UI elements & Draw Functions
 
 fn grid_col_width(ui: &egui::Ui, n_col: usize) -> f32 {
     let gap_space = ui.spacing().item_spacing.x * (n_col as f32 - 1.0);
     let grid_w = ui.available_width();
     (grid_w - gap_space) / n_col as f32
+}
+
+fn draw_col_num(ui: &egui::Ui) -> f32 {
+    1.0
+}
+
+fn draw_col_width(ui: &egui::Ui, n_col: usize, col_spacing: usize) -> f32 {
+    1.0
 }
 
 // Function to populate events with every day from the birthdate up to the end of the life expectancy
@@ -282,6 +304,7 @@ fn populate_events(config: &mut Config) {
         }
     }
 }
+
 // ----------------------------------------------------------------------------
 fn main() -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
