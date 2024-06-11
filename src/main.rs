@@ -39,144 +39,150 @@ impl Default for Config {
 struct LyfcalApp {
     config: Config,
     show_immediate_viewport: bool,
-    viewport_redraw: bool,
     //show_deferred_viewport: Arc<AtomicBool>,
 }
 
 impl eframe::App for LyfcalApp {
+    fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
+        //egui::Rgba::TRANSPARENT.to_array()
+        Default::default()
+    }
+
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            let mut style = (*ui.ctx().style()).clone(); //creating adjustable style for inner scope
-            style.spacing.item_spacing.x = 4.0;
-            ui.ctx().set_style(style.clone());
+        egui::CentralPanel::default()
+            .frame(egui::Frame::none())
+            .show(ctx, |ui| {
+                let mut style = (*ui.ctx().style()).clone(); //creating adjustable style for inner scope
+                style.spacing.item_spacing.x = 4.0;
+                ui.ctx().set_style(style.clone());
 
-            ui.heading("lyfcal config");
-            egui::Grid::new("expectancy_grid")
-                .min_col_width(grid_col_width(ui, 2))
-                .show(ui, |ui| {
-                    ui.label("birthdate:");
-                    if let Some(ref mut birthdate) = self.config.birthdate {
-                        let mut date = *birthdate;
-                        if ui
-                            .add_sized(
-                                [ui.available_width(), ui.spacing().interact_size.y],
-                                egui_extras::DatePickerButton::new(&mut date),
-                            )
-                            .changed()
-                        {
-                            *birthdate = date;
-                        }
-                    } else {
-                        // Handle the case where birthdate is None, e.g., set an initial date or show a placeholder
-                        let mut date = chrono::NaiveDate::from_ymd_opt(2000, 1, 1); // or some other default
-                        if ui
-                            .add(egui_extras::DatePickerButton::new(&mut date.unwrap()))
-                            .changed()
-                        {
-                            self.config.birthdate = Some(date.unwrap());
-                        }
-                    }
-                    ui.end_row();
-
-                    ui.label(format!("life expectancy:"));
-                    ui.add_sized(
-                        [ui.available_width(), ui.spacing().interact_size.y],
-                        egui::DragValue::new(&mut self.config.life_expectancy)
-                            .clamp_range(0..=120)
-                            .suffix(" years"),
-                    );
-                    ui.end_row();
-                    ui.label("");
-                    ui.scope(|ui| {
-                        let style = ui.style_mut();
-                        if let Some(text_style) =
-                            style.text_styles.get_mut(&egui::TextStyle::Button)
-                        {
-                            let new_size = text_style.size - 2.0; // Calculate the new size by subtracting 2
-                            text_style.size = if new_size < 6.0 { 6.0 } else { new_size };
-                            //Apply minimum
-                        }
-
-                        egui::Grid::new("expectancy_grid")
-                            .min_col_width(grid_col_width(ui, 4))
-                            .show(ui, |ui| {
-                                ui.vertical_centered_justified(|ui| {
-                                    if ui.button("−10").clicked() {
-                                        self.config.life_expectancy -= 10;
-                                    }
-                                });
-                                ui.vertical_centered_justified(|ui| {
-                                    if ui.button("−1").clicked() {
-                                        self.config.life_expectancy -= 1;
-                                    }
-                                });
-                                ui.vertical_centered_justified(|ui| {
-                                    if ui.button("+1").clicked() {
-                                        self.config.life_expectancy += 1;
-                                    }
-                                });
-                                ui.vertical_centered_justified(|ui| {
-                                    if ui.button("+10").clicked() {
-                                        self.config.life_expectancy += 10;
-                                    }
-                                });
-                            });
-                    });
-                    ui.end_row();
-                    ui.label("elapsed date:");
-                    ui.horizontal(|ui| {
-                        ui.checkbox(&mut self.config.elapsed_date_bool, "now ")
-                            .on_hover_text("set current date date to date elapsed");
-                        ui.add_enabled_ui(!self.config.elapsed_date_bool, |ui| {
-                            let mut date = chrono::offset::Utc::now().date_naive();
-                            if self.config.elapsed_date_bool == true {
-                                self.config.elapsed_date = chrono::offset::Utc::now().date_naive();
-                                if ui
-                                    .add_sized(
-                                        [ui.available_width(), ui.spacing().interact_size.y],
-                                        egui_extras::DatePickerButton::new(&mut date),
-                                    )
-                                    .changed()
-                                {}
-                            } else {
-                                if ui
-                                    .add_sized(
-                                        [ui.available_width(), ui.spacing().interact_size.y],
-                                        egui_extras::DatePickerButton::new(&mut date),
-                                    )
-                                    .changed()
-                                {
-                                    self.config.elapsed_date = date
-                                }
+                ui.heading("lyfcal config");
+                egui::Grid::new("expectancy_grid")
+                    .min_col_width(grid_col_width(ui, 2))
+                    .show(ui, |ui| {
+                        ui.label("birthdate:");
+                        if let Some(ref mut birthdate) = self.config.birthdate {
+                            let mut date = *birthdate;
+                            if ui
+                                .add_sized(
+                                    [ui.available_width(), ui.spacing().interact_size.y],
+                                    egui_extras::DatePickerButton::new(&mut date),
+                                )
+                                .changed()
+                            {
+                                *birthdate = date;
                             }
+                        } else {
+                            // Handle the case where birthdate is None, e.g., set an initial date or show a placeholder
+                            let mut date = chrono::NaiveDate::from_ymd_opt(2000, 1, 1); // or some other default
+                            if ui
+                                .add(egui_extras::DatePickerButton::new(&mut date.unwrap()))
+                                .changed()
+                            {
+                                self.config.birthdate = Some(date.unwrap());
+                            }
+                        }
+                        ui.end_row();
+
+                        ui.label(format!("life expectancy:"));
+                        ui.add_sized(
+                            [ui.available_width(), ui.spacing().interact_size.y],
+                            egui::DragValue::new(&mut self.config.life_expectancy)
+                                .clamp_range(0..=120)
+                                .suffix(" years"),
+                        );
+                        ui.end_row();
+                        ui.label("");
+                        ui.scope(|ui| {
+                            let style = ui.style_mut();
+                            if let Some(text_style) =
+                                style.text_styles.get_mut(&egui::TextStyle::Button)
+                            {
+                                let new_size = text_style.size - 2.0; // Calculate the new size by subtracting 2
+                                text_style.size = if new_size < 6.0 { 6.0 } else { new_size };
+                                //Apply minimum
+                            }
+
+                            egui::Grid::new("expectancy_grid")
+                                .min_col_width(grid_col_width(ui, 4))
+                                .show(ui, |ui| {
+                                    ui.vertical_centered_justified(|ui| {
+                                        if ui.button("−10").clicked() {
+                                            self.config.life_expectancy -= 10;
+                                        }
+                                    });
+                                    ui.vertical_centered_justified(|ui| {
+                                        if ui.button("−1").clicked() {
+                                            self.config.life_expectancy -= 1;
+                                        }
+                                    });
+                                    ui.vertical_centered_justified(|ui| {
+                                        if ui.button("+1").clicked() {
+                                            self.config.life_expectancy += 1;
+                                        }
+                                    });
+                                    ui.vertical_centered_justified(|ui| {
+                                        if ui.button("+10").clicked() {
+                                            self.config.life_expectancy += 10;
+                                        }
+                                    });
+                                });
                         });
-                    });
-                }); //end grid
+                        ui.end_row();
+                        ui.label("elapsed date:");
+                        ui.horizontal(|ui| {
+                            ui.checkbox(&mut self.config.elapsed_date_bool, "now ")
+                                .on_hover_text("set current date date to date elapsed");
+                            ui.add_enabled_ui(!self.config.elapsed_date_bool, |ui| {
+                                let mut date = chrono::offset::Utc::now().date_naive();
+                                if self.config.elapsed_date_bool == true {
+                                    self.config.elapsed_date =
+                                        chrono::offset::Utc::now().date_naive();
+                                    if ui
+                                        .add_sized(
+                                            [ui.available_width(), ui.spacing().interact_size.y],
+                                            egui_extras::DatePickerButton::new(&mut date),
+                                        )
+                                        .changed()
+                                    {}
+                                } else {
+                                    if ui
+                                        .add_sized(
+                                            [ui.available_width(), ui.spacing().interact_size.y],
+                                            egui_extras::DatePickerButton::new(&mut date),
+                                        )
+                                        .changed()
+                                    {
+                                        self.config.elapsed_date = date
+                                    }
+                                }
+                            });
+                        });
+                    }); //end grid
 
-            ui.separator();
-            ui.vertical_centered(|ui| {
-                if ui.button("initialize").clicked() {
-                    populate_events(&mut self.config);
-                    self.show_immediate_viewport = true;
-                    self.viewport_redraw = true;
-                    /*
-                    let current_value = self.show_deferred_viewport.load(Ordering::Relaxed);
-                    self.show_deferred_viewport
-                        .store(!current_value, Ordering::Relaxed);
-                    */
-                }
+                ui.separator();
+                ui.vertical_centered(|ui| {
+                    if ui.button("initialize").clicked() {
+                        populate_events(&mut self.config);
+                        self.show_immediate_viewport = true;
+                        /*
+                        let current_value = self.show_deferred_viewport.load(Ordering::Relaxed);
+                        self.show_deferred_viewport
+                            .store(!current_value, Ordering::Relaxed);
+                        */
+                    }
+                });
+                ui.separator();
+
+                ui.label(format!(
+                    "life expectancy: {} years",
+                    self.config.life_expectancy
+                ));
+
+                ui.label(format!("elapsed date: {}", self.config.elapsed_date));
+
+                ui.label(format!("event number: {}", self.config.events.len()));
             });
-            ui.separator();
-
-            ui.label(format!(
-                "life expectancy: {} years",
-                self.config.life_expectancy
-            ));
-
-            ui.label(format!("elapsed date: {}", self.config.elapsed_date));
-
-            ui.label(format!("event number: {}", self.config.events.len()));
-        });
 
         if self.show_immediate_viewport {
             ctx.show_viewport_immediate(
@@ -184,36 +190,37 @@ impl eframe::App for LyfcalApp {
                 egui::ViewportBuilder::default()
                     .with_title("lyfcal")
                     .with_transparent(true)
-                    //.with_window_level(egui::WindowLevel::AlwaysOnBottom)
                     .with_maximized(true)
+                    //.with_decorations(false)
+                    //.with_mouse_passthrough(true)
                     .with_fullsize_content_view(true),
                 |ctx, class| {
                     assert!(
                         class == egui::ViewportClass::Immediate,
                         "This egui backend doesn't support multiple viewports"
                     );
-                    if self.viewport_redraw {
-                        egui::CentralPanel::default().show(ctx, |ui| {
-                            //TODO
-                            //
-                            //
-                            //
-                            //
-
-                            ui.painter().rect_filled(
-                                egui::Rect::from_min_size(
-                                    egui::Pos2::new(100.0, 100.0),
-                                    egui::Vec2::new(200.0, 100.0),
-                                ),
-                                2.0,
-                                egui::Color32::RED,
-                            );
-                            for days in self.config.events.clone() {
-                                ui.label(format!("{:?}", days));
-                            }
-                        });
-                        self.viewport_redraw = false;
-                    }
+                    /*
+                    egui::CentralPanel::default()
+                    .frame(egui::Frame::none())
+                    .show(ctx, |ui| {
+                        //TODO
+                        //
+                        //
+                        //
+                        //
+                        ui.painter().rect_filled(
+                            egui::Rect::from_min_size(
+                                egui::Pos2::new(100.0, 100.0),
+                                egui::Vec2::new(200.0, 100.0),
+                            ),
+                            2.0,
+                            egui::Color32::RED,
+                        );
+                        for day in self.config.events.iter() {
+                            ui.label(format!("{:?}", day));
+                        }
+                    });
+                    */
                     if ctx.input(|i| i.viewport().close_requested()) {
                         self.show_immediate_viewport = false; //close viewport
                     }
@@ -311,7 +318,9 @@ fn main() -> Result<(), eframe::Error> {
         viewport: egui::ViewportBuilder::default()
             .with_title("lyfcal")
             .with_inner_size([345.0, 275.0])
-            .with_resizable(false),
+            .with_transparent(true)
+            .with_resizable(false)
+            .with_always_on_top(),
         ..Default::default()
     };
 
