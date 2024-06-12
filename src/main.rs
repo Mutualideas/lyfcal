@@ -1,10 +1,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
 use chrono::{Datelike, NaiveDate};
-use eframe::egui;
+use eframe::egui::*;
 //use egui::style;
 use egui_extras;
 use std::collections::BTreeMap;
+use style::Spacing;
 //use std::sync::{atomic::{AtomicBool, Ordering}, Arc,};
 
 #[derive(Debug)]
@@ -29,8 +30,8 @@ impl Default for Config {
             life_expectancy: 80,
             events: BTreeMap::new(),
             display_opacity: 188,
-            display_colour: egui::Color32::from_rgba_unmultiplied(255, 0, 0, 255), //TODO
-            display_colour2: egui::Color32::from_rgba_unmultiplied(255, 0, 0, 255), //TODO
+            display_colour: egui::Color32::from_rgba_unmultiplied(255, 255, 255, 255), //TODO
+            display_colour2: egui::Color32::from_rgba_unmultiplied(225, 225, 255, 255), //TODO
         }
     }
 }
@@ -40,6 +41,45 @@ struct LyfcalApp {
     config: Config,
     show_immediate_viewport: bool,
     //show_deferred_viewport: Arc<AtomicBool>,
+}
+
+impl LyfcalApp {
+
+    fn calculate_set_no(
+        &self,
+        ui:Ui,
+        unit_spacing: f32,
+        set_spacing: f32,
+    ) -> usize {
+        let event_no = self.config.events.len();
+        let week_module_w = (1*set_spacing) + (7*unit_spacing_spacing);
+
+
+        let x = col as f32 * (width + unit_spacing);
+        let y = row as f32 * (height + unit_spacing);
+        Rect::from_min_size(egui::pos2(x, y), egui::vec2(width, height))
+    }
+}
+
+
+
+    fn calculate_pos(
+        &self,
+        row: usize,
+        col: usize,
+        width: f32,
+        height: f32,
+        unit_spacing: f32,
+        set_spacing: f32,
+    ) -> Rect {
+        let event_no = self.config.events.len();
+        let set_w = (1*set_spacing) + (7*set_spacing) + (1*set_spacing);
+
+
+        let x = col as f32 * (width + unit_spacing);
+        let y = row as f32 * (height + unit_spacing);
+        Rect::from_min_size(egui::pos2(x, y), egui::vec2(width, height))
+    }
 }
 
 impl eframe::App for LyfcalApp {
@@ -199,28 +239,44 @@ impl eframe::App for LyfcalApp {
                         class == egui::ViewportClass::Immediate,
                         "This egui backend doesn't support multiple viewports"
                     );
-                    /*
+
                     egui::CentralPanel::default()
-                    .frame(egui::Frame::none())
-                    .show(ctx, |ui| {
-                        //TODO
-                        //
-                        //
-                        //
-                        //
-                        ui.painter().rect_filled(
-                            egui::Rect::from_min_size(
-                                egui::Pos2::new(100.0, 100.0),
-                                egui::Vec2::new(200.0, 100.0),
-                            ),
-                            2.0,
-                            egui::Color32::RED,
-                        );
-                        for day in self.config.events.iter() {
-                            ui.label(format!("{:?}", day));
-                        }
-                    });
-                    */
+                        .frame(egui::Frame::none())
+                        .show(ctx, |ui| {
+                            //TODO
+                            //
+                            //
+                            //
+                            //
+                            //
+                            //
+                            //
+                            //
+                            //
+                            //
+                            //
+                            let (width, height) = (50.0, 50.0); // Each rectangle's size
+                            let unit_spacing = 0.25; // Spacing between days
+                            let set_spacing = 0.25; // Spacing between column
+
+                            for row in 0..7 {
+                                for col in 0..7 {
+                                    let index = row * 7 + col; // Calculate the index for the color
+
+                                    let rect = self.calculate_pos(
+                                        row,
+                                        col,
+                                        width,
+                                        height,
+                                        unit_spacing,
+                                        set_spacing,
+                                    );
+                                    ui.painter()
+                                        .rect_filled(rect, 0.0, self.config.display_colour);
+                                }
+                            }
+                        });
+
                     if ctx.input(|i| i.viewport().close_requested()) {
                         self.show_immediate_viewport = false; //close viewport
                     }
@@ -266,14 +322,6 @@ fn grid_col_width(ui: &egui::Ui, n_col: usize) -> f32 {
     let gap_space = ui.spacing().item_spacing.x * (n_col as f32 - 1.0);
     let grid_w = ui.available_width();
     (grid_w - gap_space) / n_col as f32
-}
-
-fn draw_col_num(ui: &egui::Ui) -> f32 {
-    1.0
-}
-
-fn draw_col_width(ui: &egui::Ui, n_col: usize, col_spacing: usize) -> f32 {
-    1.0
 }
 
 // Function to populate events with every day from the birthdate up to the end of the life expectancy
