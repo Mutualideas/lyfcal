@@ -65,7 +65,7 @@ impl LyfcalApp {
             let unit_size = ui.available_width() / col_num as f32 / (7.0 + self.config.set_spacing);
 
             if (col_num * 7) as f32
-                * (ui.available_height() / unit_size + (unit_size + self.config.row_spacing as f32))
+                * (ui.available_height() / (unit_size + self.config.row_spacing as f32))
                 > (event_no - birthday_offset) as f32
             {
                 size_output = unit_size;
@@ -90,7 +90,7 @@ impl LyfcalApp {
             let unit_size = ui.available_width() / col_num as f32 / (7.0 + self.config.set_spacing);
 
             if (col_num * 7) as f32
-                * (ui.available_height() / unit_size + (unit_size + self.config.row_spacing as f32))
+                * (ui.available_height() / (unit_size + self.config.row_spacing as f32))
                 > (event_no - birthday_offset) as f32
             {
                 col_output = col_num;
@@ -115,7 +115,7 @@ impl LyfcalApp {
             let unit_size = ui.available_width() / col_num as f32 / (7.0 + self.config.set_spacing);
 
             if (col_num * 7) as f32
-                * (ui.available_height() / unit_size + (unit_size + self.config.row_spacing as f32))
+                * (ui.available_height() / (unit_size + self.config.row_spacing as f32))
                 > (event_no - birthday_offset) as f32
             {
                 row_output =
@@ -187,7 +187,7 @@ impl eframe::App for LyfcalApp {
                         ui.add_sized(
                             [ui.available_width(), ui.spacing().interact_size.y],
                             egui::DragValue::new(&mut self.config.life_expectancy)
-                                .clamp_range(0..=120)
+                                .clamp_range(1..=120)
                                 .suffix(" years"),
                         );
                         ui.end_row();
@@ -273,10 +273,25 @@ impl eframe::App for LyfcalApp {
                 });
                 ui.separator();
 
-                ui.label(format!(
-                    "life expectancy: {} years",
-                    self.config.life_expectancy
-                ));
+                let birth_year = self.config.birthdate.unwrap().year();
+                let end_year = birth_year + self.config.life_expectancy;
+                let duration = NaiveDate::from_ymd_opt(
+                    end_year,
+                    self.config.birthdate.unwrap().month(),
+                    self.config.birthdate.unwrap().day(),
+                )
+                .unwrap()
+                .signed_duration_since(
+                    NaiveDate::from_ymd_opt(
+                        birth_year,
+                        self.config.birthdate.unwrap().month(),
+                        self.config.birthdate.unwrap().day(),
+                    )
+                    .unwrap(),
+                )
+                .num_days() as i32;
+
+                ui.label(format!("life expectancy: {} days", duration));
 
                 ui.label(format!("elapsed date: {}", self.config.elapsed_date));
 
