@@ -1,11 +1,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
-use chrono::{Datelike, NaiveDate, Weekday};
+use chrono::{offset, Datelike, Local, NaiveDate, Weekday};
 use eframe::egui::*;
 //use egui::style;
+use core::f32;
 use egui_extras;
-use std::collections::BTreeMap;
-use style::Spacing;
+use std::{collections::BTreeMap, usize};
 //use std::sync::{atomic::{AtomicBool, Ordering}, Arc,};
 
 #[derive(Debug)]
@@ -15,10 +15,11 @@ struct Config {
     elapsed_date: chrono::NaiveDate,
     life_expectancy: i32,
     events: BTreeMap<NaiveDate, String>,
-    display_opacity: i32,
     display_colour: egui::Color32,
     display_colour2: egui::Color32,
-    set_spacing: f32,
+    display_colour3: egui::Color32,
+    display_colour4: egui::Color32,
+    col_spacing: f32,
     row_spacing: f32,
     edge_spacing: f32,
 }
@@ -27,15 +28,16 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             //minimized: true,
-            birthdate: Some(chrono::offset::Utc::now().date_naive()),
+            birthdate: NaiveDate::from_ymd_opt(2000, 1, 1),
             elapsed_date_bool: true,
-            elapsed_date: chrono::offset::Utc::now().date_naive(),
+            elapsed_date: Local::now().date_naive(),
             life_expectancy: 80,
             events: BTreeMap::new(),
-            display_opacity: 188,
-            display_colour: egui::Color32::from_rgba_unmultiplied(255, 255, 255, 100), //TODO
-            display_colour2: egui::Color32::from_rgba_unmultiplied(225, 225, 255, 80), //TODO
-            set_spacing: 1.0,
+            display_colour: egui::Color32::from_rgba_unmultiplied(255, 255, 255, 100),
+            display_colour2: egui::Color32::from_rgba_unmultiplied(255, 255, 255, 20),
+            display_colour3: egui::Color32::from_rgba_unmultiplied(225, 225, 250, 100),
+            display_colour4: egui::Color32::from_rgba_unmultiplied(225, 225, 250, 20),
+            col_spacing: 1.0,
             row_spacing: 0.0,
             edge_spacing: 1.0,
         }
@@ -46,97 +48,120 @@ impl Default for Config {
 struct LyfcalApp {
     config: Config,
     show_immediate_viewport: bool,
+    //draw_data: DrawData
     //show_deferred_viewport: Arc<AtomicBool>,
 }
 
 impl LyfcalApp {
     //Calculate to maximize unit size/spacing for the given screen space and spacing
-    fn calculate_unit_size(&self, ui: &mut Ui) -> f32 {
+    fn calculate_grid(&self, ui: &mut Ui) -> (usize, usize, f32) {
         let event_no = self.config.events.len();
         let birthday_offset = self
             .config
             .birthdate
             .unwrap()
             .weekday()
-            .number_from_monday() as usize;
-        let mut size_output = 0.0;
+            .num_days_from_monday() as usize;
+        let mut col_output: usize = 0;
+        let mut row_output: usize = 0;
+        let mut size_output: f32 = 0.0;
 
+        //Test for the number of columns needed to fit the total number of event entries.
         for col_num in 1.. {
-            let unit_size = ui.available_width() / col_num as f32 / (7.0 + self.config.set_spacing);
-
-            if (col_num * 7) as f32
-                * (ui.available_height() / (unit_size + self.config.row_spacing as f32))
-                > (event_no - birthday_offset) as f32
-            {
+            //Calculate the unit size for each number of columns.
+            let unit_size = ui.available_width()
+                / (col_num as f32 * 7.0
+                    + self.config.col_spacing * (col_num as f32 - 1.0)
+                    + 2.0 * self.config.edge_spacing);
+            //Work out the maximum number of rows given the unit size.
+            let row_num = ((ui.available_height() - 2.0 * self.config.edge_spacing * unit_size
+                + self.config.row_spacing as f32 * unit_size)
+                / (unit_size + self.config.row_spacing as f32 * unit_size))
+                as usize;
+            //Then check if the maximum number of event entries is greater than the total number of event entries.
+            if (col_num * 7) * row_num >= (event_no - birthday_offset) {
+                col_output = col_num;
+                row_output = row_num;
                 size_output = unit_size;
                 break;
             }
         }
-        size_output
+        (col_output, row_output, size_output)
     }
 
-    //Calculate number of unit sets columns through maximizing unit size for the given screen space and spacing
-    fn calculate_col_num(&self, ui: &mut Ui) -> usize {
-        let event_no = self.config.events.len();
-        let birthday_offset = self
-            .config
-            .birthdate
-            .unwrap()
-            .weekday()
-            .number_from_monday() as usize;
-        let mut col_output = 0;
+    //Offset unit body to account for empty column
+    fn col_offset(&self, col: usize, row: usize, unit_size: f32) -> f32 {
+        let max_unit_num = col * row * 7;
+        let unit_num = self.config.events.len()
+            + self
+                .config
+                .birthdate
+                .unwrap()
+                .weekday()
+                .num_days_from_monday() as usize;
+        let col_capacity = row * 7;
 
-        for col_num in 1.. {
-            let unit_size = ui.available_width() / col_num as f32 / (7.0 + self.config.set_spacing);
-
-            if (col_num * 7) as f32
-                * (ui.available_height() / (unit_size + self.config.row_spacing as f32))
-                > (event_no - birthday_offset) as f32
-            {
-                col_output = col_num;
-                break;
-            }
+        //the line below crashes with overflow issue if left at usize
+        if (max_unit_num as i32 - unit_num as i32) >= col_capacity as i32 {
+            unit_size * (7.0 + self.config.col_spacing) / (col as f32 - 2.0)
+        } else {
+            0.0
         }
-        col_output
-    }
-
-    //Calculate number of unit sets rows through maximizing unit size for the given screen space and spacing
-    fn calculate_row_no(&self, ui: &mut Ui) -> usize {
-        let event_no = self.config.events.len();
-        let birthday_offset = self
-            .config
-            .birthdate
-            .unwrap()
-            .weekday()
-            .number_from_monday() as usize;
-        let mut row_output = 0;
-
-        for col_num in 1.. {
-            let unit_size = ui.available_width() / col_num as f32 / (7.0 + self.config.set_spacing);
-
-            if (col_num * 7) as f32
-                * (ui.available_height() / (unit_size + self.config.row_spacing as f32))
-                > (event_no - birthday_offset) as f32
-            {
-                row_output =
-                    (ui.available_height() / (unit_size + self.config.row_spacing as f32)) as usize;
-                break;
-            }
-        }
-        row_output
     }
 
     //Calculate unit location
-    fn calculate_pos(&self, col: usize, row: usize, unit_size: f32, date: NaiveDate) -> Rect {
-        let event_no = self.config.events.len();
-
-        let x = (col as f32 * unit_size * (7.0 + self.config.set_spacing))
-            + (unit_size * date.weekday().number_from_monday() as f32);
-        let y = row as f32 * (unit_size + self.config.row_spacing);
+    fn calculate_pos(
+        &self,
+        col: usize,
+        row: usize,
+        unit_size: f32,
+        date: NaiveDate,
+        col_offset: f32,
+        x_offset: f32,
+        y_offset: f32,
+    ) -> Rect {
+        let x = unit_size
+            * (self.config.edge_spacing
+                + date.weekday().number_from_monday() as f32
+                + 7.0 * col as f32
+                + self.config.col_spacing * (col as f32 - 1.0))
+            + col as f32 * col_offset
+            + x_offset;
+        let y = unit_size
+            * (self.config.edge_spacing
+                + row as f32
+                + self.config.row_spacing * (row as f32 - 1.0))
+            + y_offset;
         Rect::from_min_size(
-            egui::pos2(x, y),
+            egui::pos2(x + 0.1 * unit_size, y + 0.1 * unit_size),
             egui::vec2(0.8 * unit_size, 0.8 * unit_size),
         )
+    }
+
+    //Draw logic
+    fn draw_unit(&self, ui: &mut Ui, rect: Rect, date: NaiveDate, unit_size: f32) {
+        if date > self.config.elapsed_date && is_weekday(date) {
+            ui.painter()
+                .rect_filled(rect, 0.0, self.config.display_colour);
+        } else if date > self.config.elapsed_date && !is_weekday(date) {
+            ui.painter()
+                .rect_filled(rect, 0.0, self.config.display_colour3);
+        } else if date <= self.config.elapsed_date && is_weekday(date) {
+            ui.painter()
+                .rect_filled(rect, 0.0, self.config.display_colour2);
+        } else {
+            ui.painter()
+                .rect_filled(rect, 0.0, self.config.display_colour4);
+        }
+
+        if date == self.config.elapsed_date {
+            ui.painter().rect_stroke(
+                rect,
+                0.0,
+                Stroke::new(unit_size * 0.1 + 0.5, self.config.display_colour),
+            );
+        };
+        //TODO weekends, 2ndary colours, date elapsed
     }
 }
 
@@ -151,7 +176,8 @@ impl eframe::App for LyfcalApp {
         egui::CentralPanel::default()
             //.frame(egui::Frame::none())
             .show(ctx, |ui| {
-                let mut style = (*ui.ctx().style()).clone(); //creating adjustable style for inner scope
+                //Initialise adjustable style for inner scope
+                let mut style = (*ui.ctx().style()).clone();
                 style.spacing.item_spacing.x = 4.0;
                 ui.ctx().set_style(style.clone());
 
@@ -233,10 +259,9 @@ impl eframe::App for LyfcalApp {
                             ui.checkbox(&mut self.config.elapsed_date_bool, "now ")
                                 .on_hover_text("set current date date to date elapsed");
                             ui.add_enabled_ui(!self.config.elapsed_date_bool, |ui| {
-                                let mut date = chrono::offset::Utc::now().date_naive();
+                                let mut date = Local::now().date_naive();
                                 if self.config.elapsed_date_bool == true {
-                                    self.config.elapsed_date =
-                                        chrono::offset::Utc::now().date_naive();
+                                    self.config.elapsed_date = Local::now().date_naive();
                                     if ui
                                         .add_sized(
                                             [ui.available_width(), ui.spacing().interact_size.y],
@@ -264,7 +289,7 @@ impl eframe::App for LyfcalApp {
                     if ui.button("initialize").clicked() {
                         populate_events(&mut self.config);
                         self.show_immediate_viewport = true;
-                        /*
+                        /* == DEFFERRED VIEWPORT ==
                         let current_value = self.show_deferred_viewport.load(Ordering::Relaxed);
                         self.show_deferred_viewport
                             .store(!current_value, Ordering::Relaxed);
@@ -303,6 +328,7 @@ impl eframe::App for LyfcalApp {
                 egui::ViewportId::from_hash_of("immediate_viewport"),
                 egui::ViewportBuilder::default()
                     .with_title("lyfcal")
+                    .with_min_inner_size([480.0, 320.0])
                     //.with_transparent(true)
                     .with_maximized(true)
                     //.with_decorations(false)
@@ -318,37 +344,41 @@ impl eframe::App for LyfcalApp {
                         .frame(egui::Frame::none())
                         .show(ctx, |ui| {
                             let mut date_incre = self.config.birthdate.unwrap();
+                            let mut rows_skipped = 0;
+                            let birthday = self.config.birthdate.unwrap();
 
                             //To allow exception to the first week shown where the week doesn't begin on a monday, extra day added for the birthday itself.
-                            let mut date_start = 8 - self
-                                .config
-                                .birthdate
-                                .unwrap()
-                                .weekday()
-                                .number_from_monday();
-                            for col in 0..(self.calculate_col_num(ui)) {
-                                for row in 0..(self.calculate_row_no(ui)) {
-                                    for _ in 0..date_start {
+                            let grid_scale: (usize, usize, f32) = self.calculate_grid(ui);
+
+                            for col in 0..(grid_scale.0) {
+                                for row in 0..(grid_scale.1) {
+                                    for _ in date_incre.weekday().num_days_from_monday() as usize..7
+                                    {
                                         if date_incre
                                             > *self.config.events.last_key_value().unwrap().0
                                         {
                                             break;
                                         }
-
-                                        let rect = self.calculate_pos(
-                                            col,
-                                            row,
-                                            self.calculate_unit_size(ui),
+                                        self.draw_unit(
+                                            ui,
+                                            self.calculate_pos(
+                                                col,
+                                                row,
+                                                grid_scale.2,
+                                                date_incre,
+                                                self.col_offset(
+                                                    grid_scale.0,
+                                                    grid_scale.1,
+                                                    grid_scale.2,
+                                                ),
+                                                0.0,
+                                                0.0,
+                                            ),
                                             date_incre,
-                                        );
-                                        ui.painter().rect_filled(
-                                            rect,
-                                            0.0,
-                                            self.config.display_colour,
+                                            grid_scale.2,
                                         );
                                         date_incre += chrono::Duration::days(1);
                                     }
-                                    date_start = 7; //return to full week after the first loop.
                                 }
                             }
                         });
@@ -360,7 +390,7 @@ impl eframe::App for LyfcalApp {
             );
         }
 
-        /*
+        /* For defferred viewport.
         if self.show_deferred_viewport.load(Ordering::Relaxed) {
             let show_deferred_viewport = self.show_deferred_viewport.clone();
             ctx.show_viewport_deferred(
@@ -392,12 +422,19 @@ impl eframe::App for LyfcalApp {
     }
 }
 
-// UI elements & Draw Functions
+// UI elements & Misc functions
 
 fn grid_col_width(ui: &egui::Ui, n_col: usize) -> f32 {
     let gap_space = ui.spacing().item_spacing.x * (n_col as f32 - 1.0);
     let grid_w = ui.available_width();
     (grid_w - gap_space) / n_col as f32
+}
+
+fn is_weekday(date: NaiveDate) -> bool {
+    match date.weekday() {
+        Weekday::Sat | Weekday::Sun => false,
+        _ => true,
+    }
 }
 
 // Function to populate events with every day from the birthdate up to the end of the life expectancy
@@ -440,6 +477,8 @@ fn main() -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("lyfcal")
+            .with_maximize_button(false)
+            //.with_icon(icon)
             .with_inner_size([345.0, 275.0])
             //.with_transparent(true)
             .with_resizable(false)
