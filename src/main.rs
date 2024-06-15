@@ -14,7 +14,7 @@ struct Config {
     elapsed_date_bool: bool,
     elapsed_date: chrono::NaiveDate,
     life_expectancy: i32,
-    events: BTreeMap<NaiveDate, String>,
+
     display_colour: egui::Color32,
     display_colour2: egui::Color32,
     display_colour3: egui::Color32,
@@ -27,12 +27,10 @@ struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            //minimized: true,
             birthdate: NaiveDate::from_ymd_opt(2000, 1, 1),
             elapsed_date_bool: true,
             elapsed_date: Local::now().date_naive(),
             life_expectancy: 80,
-            events: BTreeMap::new(),
             display_colour: egui::Color32::from_rgba_unmultiplied(255, 255, 255, 100),
             display_colour2: egui::Color32::from_rgba_unmultiplied(255, 255, 255, 20),
             display_colour3: egui::Color32::from_rgba_unmultiplied(225, 225, 250, 100),
@@ -44,20 +42,109 @@ impl Default for Config {
     }
 }
 
+#[derive(Debug)]
+struct DrawData {
+    birthdate: Option<NaiveDate>,
+    elapsed_date_bool: bool,
+    elapsed_date: chrono::NaiveDate,
+    life_expectancy: i32,
+    events: BTreeMap<NaiveDate, String>,
+    display_colour: egui::Color32,
+    display_colour2: egui::Color32,
+    display_colour3: egui::Color32,
+    display_colour4: egui::Color32,
+    col_spacing: f32,
+    row_spacing: f32,
+    edge_spacing: f32,
+}
+
+impl Default for DrawData {
+    fn default() -> Self {
+        Self {
+            birthdate: Some(Local::now().date_naive()),
+            elapsed_date_bool: true,
+            elapsed_date: Local::now().date_naive(),
+            life_expectancy: 0,
+            events: BTreeMap::new(),
+            display_colour: egui::Color32::from_rgba_unmultiplied(0, 255, 255, 100),
+            display_colour2: egui::Color32::from_rgba_unmultiplied(0, 255, 255, 20),
+            display_colour3: egui::Color32::from_rgba_unmultiplied(0, 225, 250, 100),
+            display_colour4: egui::Color32::from_rgba_unmultiplied(0, 225, 250, 20),
+            col_spacing: 0.0,
+            row_spacing: 0.0,
+            edge_spacing: 0.0,
+        }
+    }
+}
+
 #[derive(Default, Debug)]
 struct LyfcalApp {
     config: Config,
+    draw_data: DrawData,
     show_immediate_viewport: bool,
-    //draw_data: DrawData
     //show_deferred_viewport: Arc<AtomicBool>,
 }
 
 impl LyfcalApp {
+    //When initialized, data from the config is passed to draw_data.
+    fn initialize(&mut self) {
+        self.draw_data.birthdate = self.config.birthdate;
+        self.draw_data.elapsed_date_bool = self.config.elapsed_date_bool;
+        self.draw_data.elapsed_date = self.config.elapsed_date;
+        self.draw_data.life_expectancy = self.config.life_expectancy;
+
+        self.draw_data.display_colour = self.config.display_colour;
+        self.draw_data.display_colour2 = self.config.display_colour2;
+        self.draw_data.display_colour3 = self.config.display_colour3;
+        self.draw_data.display_colour4 = self.config.display_colour4;
+
+        self.draw_data.col_spacing = self.config.col_spacing;
+        self.draw_data.row_spacing = self.config.row_spacing;
+        self.draw_data.edge_spacing = self.config.edge_spacing;
+    }
+
+    //Function to populate events with every day from the birthdate up to the end of the life expectancy
+    fn populate_events(&mut self) {
+        self.draw_data.events.clear();
+        if let Some(birthdate) = self.draw_data.birthdate {
+            let birth_year = birthdate.year();
+            let end_year = birth_year + self.draw_data.life_expectancy;
+            let mut current_date = birthdate;
+            let mut expectancy_day_count = 0;
+
+            //Iterate through each year from birth year to end year for leap years.
+            for year in birth_year..end_year {
+                let days_between_bday =
+                    NaiveDate::from_ymd_opt(year + 1, birthdate.month(), birthdate.day())
+                        .unwrap()
+                        .signed_duration_since(
+                            NaiveDate::from_ymd_opt(year, birthdate.month(), birthdate.day())
+                                .unwrap(),
+                        )
+                        .num_days();
+                expectancy_day_count += days_between_bday;
+                for _ in 0..days_between_bday {
+                    if current_date > birthdate + chrono::Duration::days(expectancy_day_count) {
+                        break; // Stop if we exceed the life expectancy
+                    }
+                    self.draw_data
+                        .events
+                        .insert(current_date, format!("{}", current_date.weekday()));
+                    current_date = match current_date.checked_add_signed(chrono::Duration::days(1))
+                    {
+                        Some(date) => date,
+                        None => break, // Exit the loop if overflow occurs
+                    };
+                }
+            }
+        }
+    }
+
     //Calculate to maximize unit size/spacing for the given screen space and spacing
     fn calculate_grid(&self, ui: &mut Ui) -> (usize, usize, f32) {
-        let event_no = self.config.events.len();
+        let event_no = self.draw_data.events.len();
         let birthday_offset = self
-            .config
+            .draw_data
             .birthdate
             .unwrap()
             .weekday()
@@ -71,12 +158,12 @@ impl LyfcalApp {
             //Calculate the unit size for each number of columns.
             let unit_size = ui.available_width()
                 / (col_num as f32 * 7.0
-                    + self.config.col_spacing * (col_num as f32 - 1.0)
-                    + 2.0 * self.config.edge_spacing);
+                    + self.draw_data.col_spacing * (col_num as f32 - 1.0)
+                    + 2.0 * self.draw_data.edge_spacing);
             //Work out the maximum number of rows given the unit size.
-            let row_num = ((ui.available_height() - 2.0 * self.config.edge_spacing * unit_size
-                + self.config.row_spacing as f32 * unit_size)
-                / (unit_size + self.config.row_spacing as f32 * unit_size))
+            let row_num = ((ui.available_height() - 2.0 * self.draw_data.edge_spacing * unit_size
+                + self.draw_data.row_spacing as f32 * unit_size)
+                / (unit_size + self.draw_data.row_spacing as f32 * unit_size))
                 as usize;
             //Then check if the maximum number of event entries is greater than the total number of event entries.
             if (col_num * 7) * row_num >= (event_no - birthday_offset) {
@@ -92,9 +179,9 @@ impl LyfcalApp {
     //Offset unit body to account for empty column
     fn col_offset(&self, col: usize, row: usize, unit_size: f32) -> f32 {
         let max_unit_num = col * row * 7;
-        let unit_num = self.config.events.len()
+        let unit_num = self.draw_data.events.len()
             + self
-                .config
+                .draw_data
                 .birthdate
                 .unwrap()
                 .weekday()
@@ -103,7 +190,7 @@ impl LyfcalApp {
 
         //the line below crashes with overflow issue if left at usize
         if (max_unit_num as i32 - unit_num as i32) >= col_capacity as i32 {
-            unit_size * (7.0 + self.config.col_spacing) / (col as f32 - 2.0)
+            unit_size * (7.0 + self.draw_data.col_spacing) / (col as f32 - 2.0)
         } else {
             0.0
         }
@@ -121,16 +208,16 @@ impl LyfcalApp {
         y_offset: f32,
     ) -> Rect {
         let x = unit_size
-            * (self.config.edge_spacing
+            * (self.draw_data.edge_spacing
                 + date.weekday().number_from_monday() as f32
                 + 7.0 * col as f32
-                + self.config.col_spacing * (col as f32 - 1.0))
+                + self.draw_data.col_spacing * (col as f32 - 1.0))
             + col as f32 * col_offset
             + x_offset;
         let y = unit_size
-            * (self.config.edge_spacing
+            * (self.draw_data.edge_spacing
                 + row as f32
-                + self.config.row_spacing * (row as f32 - 1.0))
+                + self.draw_data.row_spacing * (row as f32 - 1.0))
             + y_offset;
         Rect::from_min_size(
             egui::pos2(x + 0.1 * unit_size, y + 0.1 * unit_size),
@@ -140,25 +227,25 @@ impl LyfcalApp {
 
     //Draw logic
     fn draw_unit(&self, ui: &mut Ui, rect: Rect, date: NaiveDate, unit_size: f32) {
-        if date > self.config.elapsed_date && is_weekday(date) {
+        if date > self.draw_data.elapsed_date && is_weekday(date) {
             ui.painter()
-                .rect_filled(rect, 0.0, self.config.display_colour);
-        } else if date > self.config.elapsed_date && !is_weekday(date) {
+                .rect_filled(rect, 0.0, self.draw_data.display_colour);
+        } else if date > self.draw_data.elapsed_date && !is_weekday(date) {
             ui.painter()
-                .rect_filled(rect, 0.0, self.config.display_colour3);
-        } else if date <= self.config.elapsed_date && is_weekday(date) {
+                .rect_filled(rect, 0.0, self.draw_data.display_colour3);
+        } else if date <= self.draw_data.elapsed_date && is_weekday(date) {
             ui.painter()
-                .rect_filled(rect, 0.0, self.config.display_colour2);
+                .rect_filled(rect, 0.0, self.draw_data.display_colour2);
         } else {
             ui.painter()
-                .rect_filled(rect, 0.0, self.config.display_colour4);
+                .rect_filled(rect, 0.0, self.draw_data.display_colour4);
         }
 
-        if date == self.config.elapsed_date {
+        if date == self.draw_data.elapsed_date {
             ui.painter().rect_stroke(
                 rect,
                 0.0,
-                Stroke::new(unit_size * 0.1 + 0.5, self.config.display_colour),
+                Stroke::new(unit_size * 0.1 + 0.5, self.draw_data.display_colour),
             );
         };
         //TODO weekends, 2ndary colours, date elapsed
@@ -287,7 +374,8 @@ impl eframe::App for LyfcalApp {
                 ui.separator();
                 ui.vertical_centered(|ui| {
                     if ui.button("initialize").clicked() {
-                        populate_events(&mut self.config);
+                        self.initialize();
+                        self.populate_events();
                         self.show_immediate_viewport = true;
                         /* == DEFFERRED VIEWPORT ==
                         let current_value = self.show_deferred_viewport.load(Ordering::Relaxed);
@@ -320,7 +408,7 @@ impl eframe::App for LyfcalApp {
 
                 ui.label(format!("elapsed date: {}", self.config.elapsed_date));
 
-                ui.label(format!("event number: {}", self.config.events.len()));
+                ui.label(format!("event number: {}", self.draw_data.events.len()));
             });
 
         if self.show_immediate_viewport {
@@ -343,9 +431,9 @@ impl eframe::App for LyfcalApp {
                     egui::CentralPanel::default()
                         .frame(egui::Frame::none())
                         .show(ctx, |ui| {
-                            let mut date_incre = self.config.birthdate.unwrap();
+                            let mut date_incre = self.draw_data.birthdate.unwrap();
                             let mut rows_skipped = 0;
-                            let birthday = self.config.birthdate.unwrap();
+                            let birthday = self.draw_data.birthdate.unwrap();
 
                             //To allow exception to the first week shown where the week doesn't begin on a monday, extra day added for the birthday itself.
                             let grid_scale: (usize, usize, f32) = self.calculate_grid(ui);
@@ -355,7 +443,7 @@ impl eframe::App for LyfcalApp {
                                     for _ in date_incre.weekday().num_days_from_monday() as usize..7
                                     {
                                         if date_incre
-                                            > *self.config.events.last_key_value().unwrap().0
+                                            > *self.draw_data.events.last_key_value().unwrap().0
                                         {
                                             break;
                                         }
@@ -408,7 +496,7 @@ impl eframe::App for LyfcalApp {
                     );
 
                     egui::CentralPanel::default().show(ctx, |ui| {
-                        for days in self.config.events {
+                        for days in self.draw_data.events {
                             ui.label(format!("{:?}", days));
                         }
                     });
@@ -434,41 +522,6 @@ fn is_weekday(date: NaiveDate) -> bool {
     match date.weekday() {
         Weekday::Sat | Weekday::Sun => false,
         _ => true,
-    }
-}
-
-// Function to populate events with every day from the birthdate up to the end of the life expectancy
-fn populate_events(config: &mut Config) {
-    config.events.clear();
-    if let Some(birthdate) = config.birthdate {
-        let birth_year = birthdate.year();
-        let end_year = birth_year + config.life_expectancy;
-        let mut current_date = birthdate;
-        let mut expectancy_day_count = 0;
-
-        // Iterate through each year from birth year to end year for leap years
-        for year in birth_year..=end_year - 1 {
-            let days_between_bday =
-                NaiveDate::from_ymd_opt(year + 1, birthdate.month(), birthdate.day())
-                    .unwrap()
-                    .signed_duration_since(
-                        NaiveDate::from_ymd_opt(year, birthdate.month(), birthdate.day()).unwrap(),
-                    )
-                    .num_days();
-            expectancy_day_count += days_between_bday;
-            for _ in 0..days_between_bday {
-                if current_date > birthdate + chrono::Duration::days(expectancy_day_count) {
-                    break; // Stop if we exceed the life expectancy
-                }
-                config
-                    .events
-                    .insert(current_date, format!("{}", current_date.weekday()));
-                current_date = match current_date.checked_add_signed(chrono::Duration::days(1)) {
-                    Some(date) => date,
-                    None => break, // Exit the loop if overflow occurs
-                };
-            }
-        }
     }
 }
 
