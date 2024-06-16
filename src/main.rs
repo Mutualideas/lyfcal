@@ -1,6 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
-use chrono::{offset, Datelike, Local, NaiveDate, Weekday};
+use chrono::{Datelike, Local, NaiveDate, Weekday};
 use eframe::egui::*;
 //use egui::style;
 use core::f32;
@@ -75,6 +75,10 @@ impl Default for DrawData {
             edge_spacing: 0.0,
         }
     }
+}
+
+trait ViewElements {
+    fn ui(&self);
 }
 
 #[derive(Default, Debug)]
@@ -259,7 +263,7 @@ impl eframe::App for LyfcalApp {
     }
     */
 
-    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default()
             //.frame(egui::Frame::none())
             .show(ctx, |ui| {
@@ -286,7 +290,7 @@ impl eframe::App for LyfcalApp {
                             }
                         } else {
                             // Handle the case where birthdate is None, e.g., set an initial date or show a placeholder
-                            let mut date = chrono::NaiveDate::from_ymd_opt(2000, 1, 1); // or some other default
+                            let date = chrono::NaiveDate::from_ymd_opt(2000, 1, 1); // or some other default
                             if ui
                                 .add(egui_extras::DatePickerButton::new(&mut date.unwrap()))
                                 .changed()
@@ -431,9 +435,8 @@ impl eframe::App for LyfcalApp {
                     egui::CentralPanel::default()
                         .frame(egui::Frame::none())
                         .show(ctx, |ui| {
-                            let mut date_incre = self.draw_data.birthdate.unwrap();
-                            let mut rows_skipped = 0;
-                            let birthday = self.draw_data.birthdate.unwrap();
+                            let mut date_incre =
+                                self.draw_data.birthdate.expect("No birthdate given.");
 
                             //To allow exception to the first week shown where the week doesn't begin on a monday, extra day added for the birthday itself.
                             let grid_scale: (usize, usize, f32) = self.calculate_grid(ui);
