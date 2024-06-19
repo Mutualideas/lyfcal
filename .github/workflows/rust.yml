@@ -10,27 +10,21 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  cargo:
     runs-on: ubuntu-latest
-
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - command: clippy -- -D warnings
+          - command: fmt -- --check
+          - command: test --locked
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        override: true
 
-    
-    - name: Build
-      run: cargo build --verbose
+    - uses: actions/checkout@v3
 
-    - name: Run tests
-      run: cargo test --locked --verbose
+    - uses: actions-rs/toolchain@v1
 
-    - name: Check formatting
-      run: cargo fmt --check
+    - uses: Swatinem/rust-cache@v2
 
-    - name: Lint with Clippy
-      run: cargo clippy -- -D warni
+    - run: cargo ${{ matrix.command }}
