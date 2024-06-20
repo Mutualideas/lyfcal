@@ -4,8 +4,7 @@ use chrono::{Datelike, Local, NaiveDate, Weekday};
 use eframe::egui::*;
 //use egui::style;
 use core::f32;
-use egui_extras;
-use std::{collections::BTreeMap, usize};
+use std::collections::BTreeMap;
 //use std::sync::{atomic::{AtomicBool, Ordering}, Arc,};
 
 #[derive(Debug, Clone)]
@@ -42,19 +41,10 @@ impl Default for Config {
     }
 }
 
-#[derive(Debug)]
+#[derive(Default, Debug)]
 struct DrawData {
     config: Config,
     events: BTreeMap<NaiveDate, String>,
-}
-
-impl Default for DrawData {
-    fn default() -> Self {
-        Self {
-            config: Config::default(),
-            events: BTreeMap::new(),
-        }
-    }
 }
 
 impl DrawData {
@@ -99,7 +89,7 @@ impl DrawData {
     }
 
     //Calculate to maximize unit size/spacing for the given screen space and spacing
-    fn calculate_grid(&self, ui: &mut Ui) -> (usize, usize, f32) {
+    fn calculate_matrix(&self, ui: &mut Ui) -> (usize, usize, f32) {
         let event_no = self.events.len();
         let birthday_offset = self
             .config
@@ -120,8 +110,8 @@ impl DrawData {
                     + 2.0 * self.config.border_spacing);
             //Work out the maximum number of rows given the unit size.
             let row_num = ((ui.available_height() - 2.0 * self.config.border_spacing * unit_size
-                + self.config.row_spacing as f32 * unit_size)
-                / (unit_size + self.config.row_spacing as f32 * unit_size))
+                + self.config.row_spacing * unit_size)
+                / (unit_size + self.config.row_spacing * unit_size))
                 as usize;
             //Then check if the maximum number of event entries is greater than the total number of event entries.
             if (col_num * 7) * row_num >= (event_no - birthday_offset) {
@@ -135,8 +125,8 @@ impl DrawData {
     }
 
     //Offset unit body to account for empty column
-    fn col_offset(&self, col: usize, row: usize, unit_size: f32) -> f32 {
-        let max_unit_num = col * row * 7;
+    fn col_offset(&self, matrix: (usize, usize, f32)) -> f32 {
+        let max_unit_num = matrix.0 * matrix.1 * 7;
         let unit_num = self.events.len()
             + self
                 .config
@@ -144,11 +134,11 @@ impl DrawData {
                 .unwrap()
                 .weekday()
                 .num_days_from_monday() as usize;
-        let col_capacity = row * 7;
+        let col_capacity = matrix.1 * 7;
 
         //the line below crashes with overflow issue if left at usize
         if (max_unit_num as i32 - unit_num as i32) >= col_capacity as i32 {
-            unit_size * (7.0 + self.config.col_spacing) / (col as f32 - 2.0)
+            matrix.2 * (7.0 + self.config.col_spacing) / (matrix.1 as f32 - 2.0)
         } else {
             0.0
         }
@@ -162,8 +152,7 @@ impl DrawData {
         unit_size: f32,
         date: NaiveDate,
         col_offset: f32,
-        x_offset: f32,
-        y_offset: f32,
+        offset: (f32, f32),
     ) -> Rect {
         let x = unit_size
             * (self.config.border_spacing
@@ -171,12 +160,12 @@ impl DrawData {
                 + 7.0 * col as f32
                 + self.config.col_spacing * (col as f32 - 1.0))
             + col as f32 * col_offset
-            + x_offset;
+            + offset.0;
         let y = unit_size
             * (self.config.border_spacing
                 + row as f32
                 + self.config.row_spacing * (row as f32 - 1.0))
-            + y_offset;
+            + offset.1;
         Rect::from_min_size(
             egui::pos2(x + 0.1 * unit_size, y + 0.1 * unit_size),
             egui::vec2(0.8 * unit_size, 0.8 * unit_size),
@@ -210,11 +199,11 @@ impl DrawData {
 
     fn draw_lyfcal(&mut self, ui: &mut Ui) {
         //To allow exception to the first week shown where the week doesn't begin on a monday, extra day added for the birthday itself.
-        let grid_scale: (usize, usize, f32) = self.calculate_grid(ui);
+        let matrix_scale: (usize, usize, f32) = self.calculate_matrix(ui);
         let mut date_incre = self.config.birthdate.expect("No birthdate given.");
 
-        for col in 0..(grid_scale.0) {
-            for row in 0..(grid_scale.1) {
+        for col in 0..(matrix_scale.0) {
+            for row in 0..(matrix_scale.1) {
                 for _ in date_incre.weekday().num_days_from_monday() as usize..7 {
                     if date_incre > *self.events.last_key_value().unwrap().0 {
                         break;
@@ -224,14 +213,13 @@ impl DrawData {
                         self.calculate_pos(
                             col,
                             row,
-                            grid_scale.2,
+                            matrix_scale.2,
                             date_incre,
-                            self.col_offset(grid_scale.0, grid_scale.1, grid_scale.2),
-                            0.0,
-                            0.0,
+                            self.col_offset(matrix_scale),
+                            (0.0, 0.0),
                         ),
                         date_incre,
-                        grid_scale.2,
+                        matrix_scale.2,
                     );
                     date_incre += chrono::Duration::days(1);
                 }
@@ -344,7 +332,7 @@ impl LyfcalApp {
     }
 
     fn ui_life_expectancy_input(&mut self, ui: &mut egui::Ui) {
-        ui.label(format!("life expectancy:"));
+        ui.label("life expectancy:");
         egui::Grid::new("expectancy_grid")
             .min_col_width(ui.available_width())
             .max_col_width(ui.available_width())
@@ -399,7 +387,7 @@ impl LyfcalApp {
                 .on_hover_text("set current date date to date elapsed");
             ui.add_enabled_ui(!self.config.elapsed_date_bool, |ui| {
                 let mut date = Local::now().date_naive();
-                if self.config.elapsed_date_bool == true {
+                if self.config.elapsed_date_bool {
                     self.config.elapsed_date = Local::now().date_naive();
                     if ui
                         .add_sized(
@@ -408,16 +396,14 @@ impl LyfcalApp {
                         )
                         .changed()
                     {}
-                } else {
-                    if ui
-                        .add_sized(
-                            [ui.available_width(), ui.spacing().interact_size.y],
-                            egui_extras::DatePickerButton::new(&mut date),
-                        )
-                        .changed()
-                    {
-                        self.config.elapsed_date = date
-                    }
+                } else if ui
+                    .add_sized(
+                        [ui.available_width(), ui.spacing().interact_size.y],
+                        egui_extras::DatePickerButton::new(&mut date),
+                    )
+                    .changed()
+                {
+                    self.config.elapsed_date = date
                 }
             });
         });
@@ -512,13 +498,9 @@ fn grid_col_width(ui: &egui::Ui, n_col: usize) -> f32 {
 }
 
 fn is_weekday(date: NaiveDate) -> bool {
-    match date.weekday() {
-        Weekday::Sat | Weekday::Sun => false,
-        _ => true,
-    }
+    !matches!(date.weekday(), Weekday::Sat | Weekday::Sun)
 }
 
-// ----------------------------------------------------------------------------
 fn main() -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
