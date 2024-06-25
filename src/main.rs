@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 mod config;
+mod draw;
 mod gui;
 
 fn main() -> Result<(), eframe::Error> {
@@ -8,9 +9,9 @@ fn main() -> Result<(), eframe::Error> {
             .with_title("lyfcal")
             .with_maximize_button(false)
             //.with_icon(icon)
-            .with_inner_size([345.0, 275.0])
+            .with_inner_size([345.0, 470.0])
             //.with_transparent(true)
-            .with_resizable(true)
+            .with_resizable(false)
             .with_always_on_top(),
         ..Default::default()
     };

@@ -5,7 +5,7 @@ use eframe::egui::*;
 #[derive(Default, Debug)]
 pub struct LyfcalApp {
     config: super::config::Config,
-    draw_data: super::config::DrawData,
+    draw_data: super::draw::DrawData,
     show_immediate_viewport: bool,
     //show_deferred_viewport: Arc<AtomicBool>,
 }
@@ -50,18 +50,49 @@ impl LyfcalApp {
         style.spacing.item_spacing.x = 4.0;
         ui.ctx().set_style(style);
 
-        ui.heading("lyfcal config");
-        egui::Grid::new("expectancy_grid")
+        egui::Grid::new("lyfcalconfiggrid")
             .min_col_width(grid_col_width(ui, 2))
             .max_col_width(grid_col_width(ui, 2))
             .striped(true)
+            .spacing([0.0, 8.0])
             .show(ui, |ui| {
+                self.ui_lyfcal_config_heading(ui);
+                ui.end_row();
                 self.ui_birthdate_picker(ui);
                 ui.end_row();
                 self.ui_life_expectancy_input(ui);
                 ui.end_row();
                 self.ui_elapsed_date_picker(ui);
             });
+        ui.add_space(8.0);
+        egui::Grid::new("displayconfiggrid")
+            .min_col_width(grid_col_width(ui, 2))
+            .max_col_width(grid_col_width(ui, 2))
+            .striped(true)
+            .spacing([0.0, 8.0])
+            .show(ui, |ui| {
+                self.ui_display_config_heading(ui);
+                ui.end_row();
+                self.ui_weekday_colorpicker(ui);
+                ui.end_row();
+                self.ui_weekend_colorpicker(ui);
+                ui.end_row();
+                self.ui_birthday_colorpicker(ui);
+                ui.end_row();
+                self.ui_today_colorpicker(ui);
+                ui.end_row();
+                self.ui_unit_ratio_slider(ui);
+                ui.end_row();
+                self.ui_column_spacing_slider(ui);
+                ui.end_row();
+                self.ui_row_spacing_slider(ui);
+                ui.end_row();
+                self.ui_border_spacing_slider(ui);
+            });
+        ui.add_space(12.0);
+        ui.separator();
+        ui.add_space(8.0);
+        self.draw_initialize_button(ui);
     }
 
     fn draw_initialize_button(&mut self, ui: &mut egui::Ui) {
@@ -181,23 +212,135 @@ impl LyfcalApp {
             });
         });
     }
+
+    fn ui_lyfcal_config_heading(&mut self, ui: &mut egui::Ui) {
+        ui.heading("lyfcal config");
+        egui::Grid::new("lyfcalconfigheading")
+            .min_col_width(ui.available_width())
+            .show(ui, |ui| {
+                ui.label("");
+                ui.end_row();
+                ui.label("");
+            });
+    }
+
+    fn ui_display_config_heading(&mut self, ui: &mut egui::Ui) {
+        ui.heading("display");
+        egui::Grid::new("displayheading")
+            .min_col_width(grid_col_width(ui, 2))
+            .show(ui, |ui| {
+                ui.label("");
+                ui.end_row();
+                ui.label("projected");
+                ui.label("elapsed")
+            });
+    }
+
+    fn ui_weekday_colorpicker(&mut self, ui: &mut egui::Ui) {
+        ui.label("weekday colour:");
+        egui::Grid::new("weekdaycolorpicker")
+            .min_col_width(grid_col_width(ui, 2))
+            .show(ui, |ui| {
+                ui.color_edit_button_srgba(&mut self.config.color_weekday);
+                ui.color_edit_button_srgba(&mut self.config.color_weekday_elapsed);
+            });
+    }
+
+    fn ui_weekend_colorpicker(&mut self, ui: &mut egui::Ui) {
+        ui.label("weekend colour:");
+        egui::Grid::new("weekendcolorpicker")
+            .min_col_width(grid_col_width(ui, 2))
+            .show(ui, |ui| {
+                ui.color_edit_button_srgba(&mut self.config.color_weekend);
+                ui.color_edit_button_srgba(&mut self.config.color_weekend_elapsed);
+            });
+    }
+
+    fn ui_birthday_colorpicker(&mut self, ui: &mut egui::Ui) {
+        ui.label("birthday colour:");
+        egui::Grid::new("birthdaycolorpicker")
+            .min_col_width(grid_col_width(ui, 2))
+            .show(ui, |ui| {
+                ui.color_edit_button_srgba(&mut self.config.color_birthday);
+                ui.color_edit_button_srgba(&mut self.config.color_birthday_elapsed);
+            });
+    }
+
+    fn ui_today_colorpicker(&mut self, ui: &mut egui::Ui) {
+        ui.label("current date colour:");
+        egui::Grid::new("todaycolorpicker")
+            .min_col_width(grid_col_width(ui, 2))
+            .show(ui, |ui| {
+                ui.color_edit_button_srgba(&mut self.config.color_today);
+            });
+    }
+
+    fn ui_unit_ratio_slider(&mut self, ui: &mut egui::Ui) {
+        ui.label("unit ratio:")
+            .on_hover_text("does not affect spacing");
+        ui.add_sized(
+            [ui.available_width(), ui.spacing().interact_size.y],
+            egui::DragValue::new(&mut self.config.unit_ratio)
+                .clamp_range(0.1..=1.0)
+                .speed(0.05)
+                .fixed_decimals(2)
+                .suffix("u"),
+        );
+    }
+
+    fn ui_column_spacing_slider(&mut self, ui: &mut egui::Ui) {
+        ui.label("column spacing:")
+            .on_hover_text("a column represents 7 days/units");
+        ui.add_sized(
+            [ui.available_width(), ui.spacing().interact_size.y],
+            egui::DragValue::new(&mut self.config.col_spacing)
+                .clamp_range(0.0..=10.0)
+                .speed(0.05)
+                .fixed_decimals(2)
+                .suffix("u"),
+        );
+    }
+
+    fn ui_row_spacing_slider(&mut self, ui: &mut egui::Ui) {
+        ui.label("row spacing:")
+            .on_hover_text("spacing between each unit rows");
+        ui.add_sized(
+            [ui.available_width(), ui.spacing().interact_size.y],
+            egui::DragValue::new(&mut self.config.row_spacing)
+                .clamp_range(0.0..=10.0)
+                .speed(0.05)
+                .fixed_decimals(2)
+                .suffix("u"),
+        );
+    }
+
+    fn ui_border_spacing_slider(&mut self, ui: &mut egui::Ui) {
+        ui.label("border spacing:")
+            .on_hover_text("spacing between edge of screen");
+        ui.add_sized(
+            [ui.available_width(), ui.spacing().interact_size.y],
+            egui::DragValue::new(&mut self.config.border_spacing)
+                .clamp_range(0.0..=20.0)
+                .speed(0.05)
+                .fixed_decimals(2)
+                .suffix("u"),
+        );
+    }
 }
 
+//================================================== EFRAME IMPLEMENTATION ==================================================
+
 impl eframe::App for LyfcalApp {
-    /*
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
-        //egui::Rgba::TRANSPARENT.to_array()
+        egui::Rgba::TRANSPARENT.to_array()
     }
-    */
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default()
             //.frame(egui::Frame::none())
             .show(ctx, |ui| {
                 self.draw_config_ui(ui);
-                ui.separator();
-                self.draw_initialize_button(ui);
-                ui.separator();
+                ui.add_space(20.0);
                 self.debug_println(ui)
             });
 
@@ -207,9 +350,9 @@ impl eframe::App for LyfcalApp {
                 egui::ViewportBuilder::default()
                     .with_title("lyfcal")
                     .with_min_inner_size([480.0, 320.0])
-                    //.with_transparent(true)
+                    .with_transparent(true)
                     .with_maximized(true)
-                    //.with_decorations(false)
+                    .with_decorations(false)
                     //.with_mouse_passthrough(true)
                     .with_fullsize_content_view(true),
                 |ctx, class| {
