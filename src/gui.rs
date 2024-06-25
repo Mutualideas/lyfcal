@@ -5,7 +5,7 @@ use eframe::egui::*;
 #[derive(Default, Debug)]
 pub struct LyfcalApp {
     config: super::config::Config,
-    draw_data: super::config::DrawData,
+    draw_data: super::draw::DrawData,
     show_immediate_viewport: bool,
     //show_deferred_viewport: Arc<AtomicBool>,
 }
@@ -184,11 +184,9 @@ impl LyfcalApp {
 }
 
 impl eframe::App for LyfcalApp {
-    /*
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
-        //egui::Rgba::TRANSPARENT.to_array()
+        egui::Rgba::TRANSPARENT.to_array()
     }
-    */
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default()
