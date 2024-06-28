@@ -380,9 +380,11 @@ impl eframe::App for LyfcalApp {
                 egui::ViewportId::from_hash_of("deferred_viewport"),
                 egui::ViewportBuilder::default()
                     .with_title("lyfcal")
+                    .with_min_inner_size([480.0, 320.0])
                     .with_transparent(true)
-                    //.with_window_level(egui::WindowLevel::AlwaysOnBottom)
                     .with_maximized(true)
+                    .with_decorations(false)
+                    //.with_mouse_passthrough(true)
                     .with_fullsize_content_view(true),
                 move |ctx, class| {
                     assert!(
