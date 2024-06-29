@@ -8,3 +8,4 @@ chrono = "0.4.23"
 eframe = "0.27"
 egui_extras = { version = "0.27", features = ["datepicker"] }
 egui = "0.27"
+image = { version = "0.25", features = ["jpeg", "png"] }
