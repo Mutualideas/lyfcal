@@ -147,6 +147,8 @@ impl DrawData {
             DateType::Weekend
         };
 
+        let rounding = unit_size * self.config.unit_ratio / 16.0;
+
         // Determine if the date is elapsed or in the future.
         let is_elapsed = date <= self.config.elapsed_date;
 
@@ -159,20 +161,20 @@ impl DrawData {
         };
 
         // Draw the rectangle with the determined color.
-        ui.painter().rect_filled(rect, 0.0, color);
+        ui.painter().rect_filled(rect, rounding, color);
 
         if is_birthday(date, self.config.birthdate.unwrap()) && !is_elapsed {
             ui.painter()
-                .rect_filled(rect, 0.0, self.config.color_birthday);
+                .rect_filled(rect, rounding, self.config.color_birthday);
         } else if is_birthday(date, self.config.birthdate.unwrap()) && is_elapsed {
             ui.painter()
-                .rect_filled(rect, 0.0, self.config.color_birthday_elapsed);
+                .rect_filled(rect, rounding, self.config.color_birthday_elapsed);
         };
 
         if date == self.config.elapsed_date {
             ui.painter().rect_stroke(
                 rect,
-                0.0,
+                rounding,
                 Stroke::new(unit_size * 0.1 + 0.5, self.config.color_today),
             );
         };
