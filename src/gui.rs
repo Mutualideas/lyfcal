@@ -144,7 +144,7 @@ impl LyfcalApp {
                 ui.add_sized(
                     [ui.available_width(), ui.spacing().interact_size.y],
                     egui::DragValue::new(&mut self.config.life_expectancy)
-                        .clamp_range(1..=120)
+                        .range(1..=120)
                         .suffix(" years"),
                 );
                 ui.end_row();
@@ -281,7 +281,7 @@ impl LyfcalApp {
         ui.add_sized(
             [ui.available_width(), ui.spacing().interact_size.y],
             egui::DragValue::new(&mut self.config.unit_ratio)
-                .clamp_range(0.1..=1.0)
+                .range(0.1..=1.0)
                 .speed(0.05)
                 .fixed_decimals(2)
                 .suffix("u"),
@@ -294,7 +294,7 @@ impl LyfcalApp {
         ui.add_sized(
             [ui.available_width(), ui.spacing().interact_size.y],
             egui::DragValue::new(&mut self.config.col_spacing)
-                .clamp_range(0.0..=10.0)
+                .range(0.0..=10.0)
                 .speed(0.05)
                 .fixed_decimals(2)
                 .suffix("u"),
@@ -307,7 +307,7 @@ impl LyfcalApp {
         ui.add_sized(
             [ui.available_width(), ui.spacing().interact_size.y],
             egui::DragValue::new(&mut self.config.row_spacing)
-                .clamp_range(0.0..=10.0)
+                .range(0.0..=10.0)
                 .speed(0.05)
                 .fixed_decimals(2)
                 .suffix("u"),
@@ -320,7 +320,7 @@ impl LyfcalApp {
         ui.add_sized(
             [ui.available_width(), ui.spacing().interact_size.y],
             egui::DragValue::new(&mut self.config.border_spacing)
-                .clamp_range(0.0..=20.0)
+                .range(0.0..=20.0)
                 .speed(0.05)
                 .fixed_decimals(2)
                 .suffix("u"),
