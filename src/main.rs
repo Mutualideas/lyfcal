@@ -33,6 +33,6 @@ fn main() -> Result<(), eframe::Error> {
     eframe::run_native(
         "lyfcal config",
         options,
-        Box::new(|_cc| Box::<gui::LyfcalApp>::default()),
+        Box::new(|_cc| Ok(Box::<gui::LyfcalApp>::default())),
     )
 }
