@@ -7,7 +7,7 @@ lyfcal: A calendar app that visually displays every day of your life, offering a
 By inputting your birthdate and life expectancy, lyfcal calculates and displays every single day of your life in a visually intuitive format. Each day is represented as a box, allowing you to see at a glance how many days you've lived and how many you have left.
 
 
-<img src="src/asset/screenshot.png" width="50%">
+<img src="src/asset/screenshot214800.png" width="50%">
 
 ## Sections
 
