@@ -9,3 +9,4 @@ eframe = "0.28"
 egui_extras = { version = "0.28", features = ["datepicker"] }
 egui = "0.28"
 image = { version = "0.25", features = ["jpeg", "png"] }
+tokio = { version = "1.40.0", features = ["rt"] }
