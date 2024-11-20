@@ -1,6 +1,6 @@
 use chrono::{Local, NaiveDate};
 
-#[derive(Debug, Clone)]
+#[derive(Copy, Debug, Clone)]
 pub struct Config {
     pub birthdate: Option<NaiveDate>,
     pub elapsed_date_bool: bool,

@@ -1,3 +1,4 @@
 pub mod app;
+pub mod config;
 pub mod ui;
-pub mod utils;
+pub mod util;

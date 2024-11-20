@@ -2,9 +2,11 @@ use chrono::{Datelike, NaiveDate, Weekday};
 use eframe::egui::*;
 use std::collections::BTreeMap;
 
+use crate::config::config::*;
+
 #[derive(Default, Debug)]
 struct Matrix {
-    //Each column contains 7 units for each day of the week.
+    // Each column contains 7 units for each day of the week.
     col: usize,
     row: usize,
     unit_size: f32,
@@ -12,16 +14,16 @@ struct Matrix {
 
 #[derive(Default, Debug)]
 pub struct DrawData {
-    pub config: super::config::Config,
+    pub config: Config,
     pub events: BTreeMap<NaiveDate, String>,
 }
 
 impl DrawData {
-    pub fn initialize(&mut self, config: &super::config::Config) {
-        self.config = config.clone();
+    pub fn initialize(&mut self, config: Config) {
+        self.config = config;
     }
 
-    //Function to populate events with every day from the birthdate up to the end of the life expectancy
+    // Function to populate events with every day from the birthdate up to the end of the life expectancy
     pub fn populate_events(&mut self) {
         self.events.clear();
 

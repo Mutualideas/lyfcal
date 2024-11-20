@@ -2,10 +2,13 @@ use chrono::{Datelike, Local, NaiveDate};
 use core::f32;
 use eframe::egui::*;
 
+use crate::config::config::*;
+use crate::ui::component::display::*;
+
 #[derive(Default, Debug)]
 pub struct LyfcalApp {
-    config: super::config::Config,
-    draw_data: super::draw::DrawData,
+    config: Config,
+    draw_data: DrawData,
     show_immediate_viewport: bool,
     //show_deferred_viewport: Arc<AtomicBool>,
 }
@@ -13,7 +16,7 @@ pub struct LyfcalApp {
 impl LyfcalApp {
     //When initialized, data from the config is passed to draw_data.
     fn initialize(&mut self) {
-        self.draw_data.initialize(&self.config);
+        self.draw_data.initialize(self.config);
     }
 
     #[cfg(debug_assertions)]

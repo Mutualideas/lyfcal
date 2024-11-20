@@ -3,9 +3,10 @@
 
 use egui::IconData;
 
+mod app;
 mod config;
-mod draw;
-mod gui;
+mod ui;
+mod util;
 
 fn main() -> Result<(), eframe::Error> {
     let icon = image::open("src/assets/icon.png")
@@ -33,6 +34,6 @@ fn main() -> Result<(), eframe::Error> {
     eframe::run_native(
         "lyfcal config",
         options,
-        Box::new(|_cc| Ok(Box::<gui::LyfcalApp>::default())),
+        Box::new(|_cc| Ok(Box::<app::state::LyfcalApp>::default())),
     )
 }
